@@ -438,7 +438,7 @@ export class Router {
     async (req, res, next) => {
       logger.debug(`Received API call to get device profile`);
       const apiKey = await containerAPI.getDeviceSdkInstance().getToken().catch((err) => {
-          logger.error(`Received error while fetching api key in location search with error: ${err}`);
+          logger.error(`Received error while fetching api key in device profile with error: ${err}`);
       });
       req.headers.Authorization = `Bearer ${apiKey}`;
       next();
