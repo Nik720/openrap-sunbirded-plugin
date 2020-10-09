@@ -20,11 +20,11 @@ const systemInfo = {
     linux: "linux",
 };
 
-// @ClassLogger({
-//     logLevel: "debug",
-//     logTime: true,
-//     logMethods: ["getDeviceId", "getDesktopAppUpdate", "getAppInfo" ],
-//   })
+@ClassLogger({
+    logLevel: "debug",
+    logTime: true,
+    logMethods: ["getDeviceId" ],
+  })
 export default class Appupdate {
     private deviceId;
 
@@ -38,7 +38,6 @@ export default class Appupdate {
     public async getDesktopAppUpdate(req, res) {
         try {
             const data = await this.checkForUpdate();
-            logger.info(`ReqId = "${req.headers["X-msgid"]}": result: ${data} found from desktop app update api`);
             return res.send(Response.success("api.desktop.update", _.get(data, "data.result"), req));
         } catch (err) {
             logger.error(`ReqId = "${req.headers["X-msgid"]}": Received error while processing desktop app update request where err = ${err}`);

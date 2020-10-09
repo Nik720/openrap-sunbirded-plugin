@@ -11,10 +11,10 @@ import TelemetryHelper from "../../helper/telemetryHelper";
 import { NetworkQueue } from "OpenRAP/dist/services/queue";
 
 import { ClassLogger} from "@project-sunbird/logger/decorator";
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export class ImportTelemetry implements ITaskExecuter {
   public static taskType = "TELEMETRY_IMPORT";
   private deviceId: string;

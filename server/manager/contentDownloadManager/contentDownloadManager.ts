@@ -16,11 +16,10 @@ const DefaultRequestOptions = { headers: { "Content-Type": "application/json" } 
 import HardDiskInfo from "../../utils/hardDiskInfo";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
-// @ClassLogger({
-//   logLevel: "debug",
-//   logTime: true,
-
-// })
+@ClassLogger({
+  logLevel: "debug",
+  logTime: true,
+})
 @Singleton
 export class ContentDownloadManager {
   @Inject private dbSDK: DatabaseSDK;

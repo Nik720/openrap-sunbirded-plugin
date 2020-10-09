@@ -9,10 +9,10 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-// @ClassLogger({
-//   logLevel: "debug",
-//   logTime: true,
-// })
+@ClassLogger({
+  logLevel: "debug",
+  logTime: true,
+})
 export class Channel {
   @Inject
   private databaseSdk: DatabaseSDK;
@@ -39,13 +39,10 @@ export class Channel {
            isInserted = _.find(channelsList, {id});
         }
         if (!isInserted) {
-          logger.info(`${id} is not inserted`);
           const channel = await this.fileSDK.readJSON(path.join(channelsFilesBasePath, file));
           const doc = _.get(channel, "result.channel");
           doc._id = id;
           channelDocs.push(doc);
-        } else {
-          logger.info(`${id} is inserted`);
         }
       }
       if (channelDocs.length) {
@@ -60,15 +57,9 @@ export class Channel {
 
   public get(req, res) {
     const id = req.params.id;
-    logger.info(
-      `ReqId = "${req.headers["X-msgid"]}": Getting the data from channel database with id: ${id}`,
-    );
     this.databaseSdk
       .get("channel", id)
       .then((data) => {
-        logger.info(
-          `ReqId = "${req.headers["X-msgid"]}": Received data from channel database`,
-        );
         data = _.omit(data, ["_id", "_rev"]);
         const resObj = {
           channel: data,
@@ -77,7 +68,7 @@ export class Channel {
       })
       .catch((err) => {
         logger.error(
-          `ReqId = "${req.headers["X-msgid"]}": Received error while getting the data from channel database with id: ${id} and err.message: ${err.message} ${err}`,
+        `ReqId = "${req.headers["X-msgid"]}": Received error while getting the data from channel database with id: ${id} and err.message: ${err.message} ${err}`,
         );
         if (err.status === 404) {
           res.status(404);

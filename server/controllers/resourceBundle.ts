@@ -9,11 +9,11 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
 
-})*/
+})
 export class ResourceBundle {
   // resourceBundleFiles
   @Inject
@@ -57,9 +57,6 @@ export class ResourceBundle {
   public get(req, res) {
 
     const id = req.params.id || "en";
-    logger.info(
-      `ReqId = "${req.headers["X-msgid"]}": Getting the data from resource_bundle database with id: ${id}`,
-    );
     this.databaseSdk
       .get("resource_bundle", id)
       .then((data) => {

@@ -12,10 +12,10 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export class Form {
   @Inject
   private databaseSdk: DatabaseSDK;
@@ -49,11 +49,8 @@ export class Form {
            isInserted = _.find(formsList, {id});
         }
         if (!isInserted) {
-          logger.info(`${id} is not inserted`);
           doc._id = id;
           formDocs.push(doc);
-        } else {
-          logger.info(`${id} is inserted`);
         }
       }
       if (formDocs.length) {
@@ -100,9 +97,6 @@ export class Form {
         const resObj = {
           form: data[0],
         };
-        logger.info(
-          `ReqId = "${req.headers["X-msgid"]}": Received data  from - form database`,
-        );
         return res.send(Response.success("api.form.read", resObj, req));
       })
       .catch((err) => {

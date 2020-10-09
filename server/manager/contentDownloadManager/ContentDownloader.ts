@@ -14,10 +14,10 @@ import TelemetryHelper from "../../helper/telemetryHelper";
 import HardDiskInfo from "../../utils/hardDiskInfo";
 import ContentLocation from "../../controllers/contentLocation";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export class ContentDownloader implements ITaskExecuter {
   public static taskType = "DOWNLOAD";
   public static group = "CONTENT_MANAGER";

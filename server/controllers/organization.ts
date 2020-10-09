@@ -9,10 +9,10 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-// @ClassLogger({
-//   logLevel: "debug",
-//   logTime: true,
-// })
+@ClassLogger({
+  logLevel: "debug",
+  logTime: true,
+})
 export class Organization {
   @Inject
   private databaseSdk: DatabaseSDK;
@@ -40,13 +40,10 @@ export class Organization {
            isInserted = _.find(organizationsList, {id});
         }
         if (!isInserted) {
-          logger.info(`${id} is not inserted`);
           const organization = await this.fileSDK.readJSON(path.join(oragnizationFilesBasePath, file));
           const doc = _.get(organization, "result.response.content[0]");
           doc._id = id;
           organizationDocs.push(doc);
-        } else {
-          logger.info(`${id} is inserted`);
         }
       }
       if (organizationDocs.length) {
@@ -66,9 +63,6 @@ export class Organization {
     const searchObj = {
       selector: _.get(requestBody, "request.filters"),
     };
-    logger.debug(
-      `ReqId = "${req.headers["X-msgid"]}": Finding the data from organization database`,
-    );
     this.databaseSdk
       .find("organization", searchObj)
       .then((data) => {
@@ -79,9 +73,6 @@ export class Organization {
             count: data.length,
           },
         };
-        logger.info(
-          `ReqId = "${req.headers["X-msgid"]}": Received data from organization database`,
-        );
         return res.send(Response.success("api.org.search", resObj, req));
       })
       .catch((err) => {

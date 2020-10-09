@@ -15,10 +15,10 @@ import TelemetryHelper from "../../helper/telemetryHelper";
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 import ContentLocation from "../../controllers/contentLocation";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export class ImportContent implements ITaskExecuter {
   private deviceId: string;
   public static taskType = "IMPORT";
@@ -89,9 +89,9 @@ export class ImportContent implements ITaskExecuter {
 
   public cleanUpAfterErrorOrCancel() {
     const fileSDKEcarInstance = containerAPI.getFileSDKInstance(manifest.id);
-    fileSDKEcarInstance.remove(path.join("ecars", this.contentImportData._id + ".ecar")).catch((err) => logger.debug(`Error while deleting file ${path.join("ecars", this.contentImportData._id + ".ecar")}`));
+    fileSDKEcarInstance.remove(path.join("ecars", this.contentImportData._id + ".ecar")).catch((err) => logger.error(`Error while deleting file ${path.join("ecars", this.contentImportData._id + ".ecar")}`));
 
-    this.fileSDK.remove(path.join(this.contentFolderPath, this.contentImportData._id)).catch((err) => logger.debug(`Error while deleting folder ${path.join("content", this.contentImportData._id)}`));
+    this.fileSDK.remove(path.join(this.contentFolderPath, this.contentImportData._id)).catch((err) => logger.error(`Error while deleting folder ${path.join("content", this.contentImportData._id)}`));
     // TODO: delete content folder if there"s no record in db;
   }
 

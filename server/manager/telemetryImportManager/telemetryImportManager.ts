@@ -9,10 +9,10 @@ import { manifest } from "../../manifest";
 import { ImportTelemetry } from "./telemetryImport";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
-// @ClassLogger({
-//   logLevel: "debug",
-//   logTime: true,
-// })
+@ClassLogger({
+  logLevel: "debug",
+  logTime: true,
+})
 @Singleton
 export class TelemetryImportManager {
   private systemQueue: ISystemQueueInstance;

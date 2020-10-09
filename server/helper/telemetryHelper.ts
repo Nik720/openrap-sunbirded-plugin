@@ -4,11 +4,10 @@ const telemetryInstance = containerAPI.getTelemetrySDKInstance().getInstance();
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-
-})*/
+})
 export default class TelemetryHelper {
 
     public logShareEvent(shareItems: object[], dir: string, telemetryEnv: string) {

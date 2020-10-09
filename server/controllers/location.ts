@@ -12,10 +12,11 @@ import { ILocation } from "./ILocation";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+  logMethods: ["insert", "search", "insertStatesDataInDB", "updateStateDataInDB", "constructSearchEdata" ],
+})
 export class Location {
     @Inject private databaseSdk: DatabaseSDK;
     @Inject private telemetryHelper: TelemetryHelper;
@@ -44,7 +45,6 @@ export class Location {
                     state.data = _.get(districtFile, "result.response") || [];
                     allStates.push(state);
                 }
-                logger.debug("Inserting location data in locationDB");
                 await this.databaseSdk.bulk("location", allStates).catch((err) => {
                     logger.error(`while inserting location data in locationDB  ${err}`);
                 });
@@ -60,7 +60,6 @@ export class Location {
     public async search(req, res) {
         const locationType = _.get(req.body, "request.filters.type");
         const parentId = _.get(req.body, "request.filters.parentId");
-        logger.debug(`ReqId = '${req.headers["X-msgid"]}': Finding the data from location database`);
         if (_.isEmpty(locationType)) {
             res.status(400);
             return res.send(Response.error("api.location.search", 400, "location Type is missing"));
@@ -75,7 +74,6 @@ export class Location {
             return res.send(Response.error("api.location.search", 400, "parentId is missing"));
         }
 
-        logger.debug(`ReqId = ${req.headers["X-msgid"]}: getLocationData method is calling`);
         const request = _.isEmpty(parentId) ? { selector: {} } : { selector: { id: parentId } };
         await this.databaseSdk.find("location", request).then((response) => {
             response = _.map(response.docs, (doc) => {
@@ -84,7 +82,6 @@ export class Location {
             const resObj = {
                 response: locationType === "district" ? response[0] : response,
             };
-            logger.info(`ReqId =  ${req.headers["X-msgid"]}: got data from db`);
             const responseObj = Response.success("api.location.search", resObj, req);
             this.constructSearchEdata(req, responseObj);
             return res.send(responseObj);
@@ -127,7 +124,6 @@ export class Location {
             request: filter,
         };
         try {
-            logger.debug(`ReqId =  ${req.headers["X-msgid"]}}: getting location data from online`);
             const responseData = await HTTPService.post(
                 `${process.env.APP_BASE_URL}/api/data/v1/location/search`,
                 requestParams,
@@ -142,7 +138,6 @@ export class Location {
                 response,
             };
 
-            logger.debug(`ReqId =  ${req.headers["X-msgid"]}: fetchLocationFromOffline method is calling `);
             const responseObj = Response.success("api.location.search", resObj, req);
             this.constructSearchEdata(req, responseObj);
             return res.send(responseObj);
@@ -171,15 +166,12 @@ export class Location {
                     }
                 }
                 if (bulkInsert.length > 0) {
-                    logger.info(`ReqId =  ${msgId}: bulkInsert in LocationDB`);
                     await this.databaseSdk.bulk("location", bulkInsert);
                 }
                 if (bulkUpdate.length > 0) {
-                    logger.info(`ReqId =  ${msgId}: bulkUpdate in LocationDB`);
                     await this.databaseSdk.bulk("location", bulkUpdate);
                 }
             } else {
-                logger.info(`ReqId =  ${msgId}: state data is empty`);
                 return;
             }
         } catch (err) {
@@ -191,14 +183,11 @@ export class Location {
 
         try {
             const id = district[0].parentId;
-            logger.info(`ReqId =  ${msgId}: getting data from LocationDB`);
             const state = await this.databaseSdk.get("location", id);
             if (!_.isEmpty(district)) {
                 state.data = district;
-                logger.info(`ReqId =  ${msgId}: updating data in LocationDB`);
                 await this.databaseSdk.update("location", state.id, state);
             } else {
-                logger.info(`ReqId =  ${msgId}: district data is empty`);
                 return;
             }
 
@@ -215,7 +204,6 @@ export class Location {
                 throw new Error("State and district should be an object");
             }
             const resObj = locationData;
-            logger.info(`ReqId =  ${req.headers["X-msgid"]}: saving userlocation data in settingsSdk`);
             const response = await this.settingSDK.put("location", resObj);
             res.status(200);
             return res.send(Response.success("api.location.save", response, req));
@@ -238,7 +226,6 @@ export class Location {
 
     public async get(req, res) {
         try {
-            logger.info(`ReqId = "${req.headers["X-msgid"]}": Getting location from location DB`);
             const locationData = await this.settingSDK.get("location");
             return res.send(Response.success("api.location.read", locationData, req));
         } catch (err) {

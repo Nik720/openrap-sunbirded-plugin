@@ -1,10 +1,15 @@
 import { frameworkAPI } from "@project-sunbird/ext-framework-server/api";
 import { logger } from "@project-sunbird/logger";
+import { ClassLogger } from "@project-sunbird/logger/decorator";
 import * as  _ from "lodash";
 import { containerAPI } from "OpenRAP/dist/api";
 import * as os from "os";
 import * as path from "path";
 
+@ClassLogger({
+  logLevel: "debug",
+  logTime: true,
+})
 export default class ContentLocation {
   private fileSDK;
   private settingSDK;

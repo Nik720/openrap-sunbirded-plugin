@@ -10,10 +10,10 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export class Framework {
   @Inject
   private databaseSdk: DatabaseSDK;
@@ -40,13 +40,10 @@ export class Framework {
            isInserted = _.find(frameworksList, {id});
         }
         if (!isInserted) {
-          logger.info(`${id} is not inserted`);
           const framework = await this.fileSDK.readJSON(path.join(frameworksFilesBasePath, file));
           const doc = _.get(framework, "result.framework");
           doc._id = id;
           frameworkDocs.push(doc);
-        } else {
-          logger.info(`${id} is inserted`);
         }
       }
       if (frameworkDocs.length) {
@@ -62,15 +59,9 @@ export class Framework {
   public get(req: any, res: any): any {
 
     const id = req.params.id;
-    logger.info(
-      `ReqId = "${req.headers["X-msgid"]}": Getting the data from framework database with id: ${id}`,
-    );
     this.databaseSdk
       .get("framework", id)
       .then((data) => {
-        logger.info(
-          `ReqId = "${req.headers["X-msgid"]}": Received data with id: ${id} from framework database`,
-        );
         data = _.omit(data, ["_id", "_rev"]);
         const resObj = {
           framework: data,

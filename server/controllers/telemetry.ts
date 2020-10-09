@@ -11,10 +11,10 @@ import Response from "./../utils/response";
 
 import { ClassLogger } from "@project-sunbird/logger/decorator";
 
-/*@ClassLogger({
+@ClassLogger({
   logLevel: "debug",
   logTime: true,
-})*/
+})
 export default class Telemetry {
   @Inject
   private databaseSdk: DatabaseSDK;
@@ -35,15 +35,9 @@ export default class Telemetry {
   public addEvents(req, res) {
     const events = req.body.events;
     if (_.isArray(events) && events.length) {
-      logger.debug(
-        `ReqId = "${req.headers["X-msgid"]}": telemetry service is called to add telemetryEvents`,
-      );
       this.telemetrySDK
         .send(events)
         .then((data) => {
-          logger.info(
-            `ReqId = "${req.headers["X-msgid"]}": Telemetry events added successfully ${data}`,
-          );
           return res.send(Response.success("api.telemetry", {}, req));
         })
         .catch((err) => {
