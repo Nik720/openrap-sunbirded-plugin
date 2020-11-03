@@ -1,12 +1,13 @@
-import { ContentDownloadManager } from "./manager/contentDownloadManager";
-import { Inject } from "typescript-ioc";
-import { logger } from "@project-sunbird/logger";
 import { Manifest } from "@project-sunbird/ext-framework-server/models/Manifest";
-import * as cheerio  from "cheerio";
+import { logger } from "@project-sunbird/logger";
+import * as cheerio from "cheerio";
+import * as cookieParser from "cookie-parser";
 import * as proxy from "express-http-proxy";
+import * as session from "express-session";
 import * as _ from "lodash";
 import { containerAPI } from "OpenRAP/dist/api";
 import * as path from "path";
+import { Inject } from "typescript-ioc";
 import * as url from "url";
 import * as uuid from "uuid";
 import * as inline from "web-resource-inliner";
@@ -25,11 +26,21 @@ import { ResourceBundle } from "./controllers/resourceBundle";
 import Telemetry from "./controllers/telemetry";
 import Tenant from "./controllers/tenant";
 import User from "./controllers/user";
+import { getKeyCloakClient, memoryStore } from "./helper/keyCloakHelper";
+import * as proxyUtils from "./helper/proxyUtils";
 import TelemetryHelper from "./helper/telemetryHelper";
+import { ContentDownloadManager } from "./manager/contentDownloadManager";
 import Response from "./utils/response";
 let telemetry;
 
 const proxyUrl = process.env.APP_BASE_URL;
+const keycloak = getKeyCloakClient({
+  "realm": process.env.PORTAL_REALM,
+  "auth-server-url": process.env.PORTAL_AUTH_SERVER_URL,
+  "ssl-required": "none",
+  "resource": process.env.PORTAL_AUTH_SERVER_CLIENT,
+  "public-client": true,
+});
 export class Router {
   @Inject private contentDownloadManager: ContentDownloadManager;
   public init(app: any, manifest: Manifest, auth?: any) {
@@ -128,38 +139,73 @@ export class Router {
       });
       next();
     };
+    app.use(cookieParser());
     app.use(logTelemetryEvent);
     const addRequestId = (req, res, next) => {
       req.headers["X-msgid"] = req.get("X-msgid") || uuid.v4();
       next();
     };
+
     app.use(addRequestId);
-    // portal static routes
-    app.all(
-      [
-        "/",
-        "/play/*",
-        "/import/content",
-        "/get",
-        "/get/*",
-        "/browse",
-        "/browse/*",
-        "/search/*",
-        "/help-center",
-        "/help-center/*",
-        "/profile",
-        "/profile/*",
-      ],
-      async (req, res) => {
-        const locals = await this.getLocals(manifest);
-        _.forIn(locals, (value, key) => {
-          res.locals[key] = value;
-        });
-        res.render(
-          path.join(__dirname, "..", "..", "public", "portal", "index.ejs"),
-        );
-      },
+
+    app.all([ "/learn", "/learn/*", "/resources", "/resources/*"],
+      session({
+        secret: "717b3357-b2b1-4e39-9090-1c712d1b8b64",
+        resave: false,
+        cookie: {
+          maxAge: Number(process.env.sunbird_session_ttl),
+        },
+        saveUninitialized: false,
+        store: memoryStore,
+      }),
+      keycloak.middleware({ admin: "/callback", logout: "/logout" }),
+      keycloak.protect(),
+      this.indexPage(true),
     );
+
+    app.all([
+      "/",
+      "/play/*",
+      "/import/content",
+      "/get",
+      "/get/*",
+      "/search/*",
+      "/help-center",
+      "/help-center/*",
+      "/logout", "/assets/public/*", "/endSession", "/sso/sign-in/*",
+      "/logoff", "/profile", "/profile/*", "/browse", "/browse/*",
+    ],
+      session({
+        secret: "717b3357-b2b1-4e39-9090-1c712d1b8b64",
+        resave: false,
+        cookie: {
+          maxAge: Number(process.env.sunbird_session_ttl),
+        },
+        saveUninitialized: false,
+        store: memoryStore,
+      }),
+      keycloak.middleware({ admin: "/callback", logout: "/logout" }),
+    );
+
+    app.all([
+      "/",
+      "/play/*",
+      "/import/content",
+      "/get",
+      "/get/*",
+      "/search/*",
+      "/help-center",
+      "/help-center/*",
+      "/assets/public/*", "/endSession", "/sso/sign-in/*",
+      "/profile", "/profile/*", "/browse", "/browse/*",
+    ],
+      this.indexPage(false),
+    );
+
+    app.all("/logoff", this.endSession, (req, res) => {
+      res.cookie("connect.sid", "", { expires: new Date() });
+      res.redirect("/logout");
+    });
 
     // api's for portal
 
@@ -308,7 +354,7 @@ export class Router {
       async (req, res, next) => {
         logger.debug(`Received API call to read Content: ${req.params.id}`);
         const offlineData = await content.getOfflineContents([req.params.id], req.headers["X-msgid"]).catch(error => {
-          logger.error(`ReqId = "${req.headers["X-msgid"]}": Received error while getting data from course read`, error)
+          logger.error(`ReqId = "${req.headers["X-msgid"]}": Received error while getting data from course read`, error);
         });
         if (enableProxy(req) && offlineData.docs.length <= 0 ) {
           logger.info(`Proxy is Enabled`);
@@ -490,7 +536,7 @@ export class Router {
       (req, res, next) => {
         logger.debug(`Received API call to search content`);
         logger.debug(`ReqId = "${req.headers["X-msgid"]}": Check proxy`);
-
+        
         const online = Boolean(_.get(req, "query.online") && req.query.online.toLowerCase() === "true");
 
         if (online) {
@@ -763,13 +809,51 @@ export class Router {
     };
   }
 
+  public indexPage = (loggedInRoute) => {
+    logger.debug("Keycloak index page");
+    return async (req, res) => {
+      logger.debug(`KEYCLOCK: index page loggedInRoute => ${loggedInRoute} ||  ${process.env.CHANNEL} || ${req.path}` );
+      if (process.env.CHANNEL && req.path === "/") {
+        this.renderDefaultIndexPage(req, res);
+      } else {
+        req.includeUserDetail = true;
+        if (!loggedInRoute) { // for public route, if user token is valid then send user details
+          logger.debug("NON loggedInRoute checking for validateUserToken");
+          await proxyUtils.validateUserToken(req, res).catch(() => req.includeUserDetail = false);
+        }
+        this.renderDefaultIndexPage(req, res);
+      }
+    };
+  }
+
+  public renderDefaultIndexPage = async (req, res) => {
+      res.set("Cache-Control", "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0");
+      const locals = await this.getLocals(req);
+      _.forIn(locals, (value, key) => {
+        res.locals[key] = value;
+      });
+      res.locals.cdnWorking = "no";
+      res.render(path.join(__dirname, "..", "..", "public", "portal", "index.ejs"));
+  }
+
   public async getLocals(manifest) {
     const deviceId = await containerAPI
       .getSystemSDKInstance(manifest.id)
       .getDeviceId();
+    const slug = req.params.slug;
     const locals: any = {};
-    locals.userId = null;
-    locals.sessionId = null;
+    if (manifest.includeUserDetail) {
+      logger.debug("GET LOCALS USER ID =>", manifest.session.userId);
+      logger.debug("GET includeUserDetail =>", manifest.includeUserDetail);
+      locals.userId = _.get(manifest, "session.userId") ? manifest.session.userId : null;
+      locals.sessionId = _.get(manifest, "sessionID") && _.get(manifest, "session.userId") ? manifest.sessionID : null;
+      locals.userSid = _.get(manifest, "session.userSid") || locals.sessionId || null;
+    } else {
+      locals.userId = null;
+      locals.sessionId = null;
+      locals.userSid = null;
+    }
+    logger.debug("User ID: ", locals.userId);
     locals.cdnUrl = "";
     locals.theme = "";
     locals.defaultPortalLanguage = "en";
@@ -801,6 +885,22 @@ export class Router {
     locals.deviceProfileApi = "/api/v3/device/profile";
     locals.deviceApi = `${process.env.APP_BASE_URL}/api/`;
     locals.baseUrl = process.env.APP_BASE_URL;
+    locals.slug = slug ? slug : "";
     return locals;
+  }
+
+  public async endSession(request, response, next) {
+    logger.debug("ENDING SESSION", request.session);
+    delete request.session["roles"];
+    delete request.session["rootOrgId"];
+    delete request.session["orgs"];
+    if (request.session) {
+      if (_.get(request, "session.userId")) {
+        // telemetryHelper.logSessionEnd(request)
+      }
+      delete request.session.sessionEvents;
+      delete request.session["deviceId"];
+    }
+    next();
   }
 }
